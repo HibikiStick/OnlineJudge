@@ -56,6 +56,7 @@ const loginUser = Store.state.userMoudel.loginUser;
 
 const visbleRoute = computed(() => {
   return routes.filter((item, index) => {
+    console.log("权限为", item);
     // todo 根据权限过滤菜单
     if (item.meta?.hideInMenu) {
       return false;

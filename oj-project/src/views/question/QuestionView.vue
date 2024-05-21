@@ -1,5 +1,19 @@
 <template>
-  <div id="managerQuestion">
+  <div id="questionView">
+    <a-form :model="searchParmas" layout="inline">
+      <a-form-item field="title" label="題目">
+        <a-input
+          v-model="searchParmas.title"
+          placeholder="please enter titles."
+        />
+      </a-form-item>
+      <a-form-item field="tags" label="Tag">
+        <a-input v-model="searchParmas.tags" placeholder="please enter tags." />
+      </a-form-item>
+      <a-form-item>
+        <a-button>Submit</a-button>
+      </a-form-item>
+    </a-form>
     <a-table
       :columns="columns"
       :data="dataList"
@@ -11,21 +25,38 @@
       }"
       @page-change="onPageChange"
     >
+      <template #tags="{ record }">
+        <a-space wrap>
+          <a-tag
+            v-for="(item, index) of record.tags"
+            :key="index"
+            color="green"
+            bordered
+            >{{ item }}</a-tag
+          >
+        </a-space>
+      </template>
+      <template #acceptedRate="{ record }">{{ record.acceptedNum }} </template>
+      <template #createTime="{ record }">
+        <a-button>{{
+          moment(record.createTime).format("YYYY-MM-DD")
+        }}</a-button>
+      </template>
       <template #optional="{ record }">
-        <a-button status="primary" @click="doUpdate(record)">修正</a-button>
-        <a-popconfirm content="削除しますか?" type="error" ok="printlog">
-          <a-button status="danger" @click="doDelet(record)">削除</a-button>
-        </a-popconfirm>
+        <a-button status="primary" @click="toQuestionPage(record)"
+          >チャレンジ</a-button
+        >
       </template>
     </a-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, toRaw } from "vue";
 import axios from "@/util/axios";
 import { useRouter } from "vue-router";
 import message from "@arco-design/web-vue/es/message";
+import moment from "moment";
 
 const url = "http://localhost:8081";
 const router = useRouter();
@@ -33,6 +64,8 @@ const show = ref(true);
 const dataList = ref([]);
 const total = ref(0);
 const searchParmas = ref({
+  title: "",
+  tags: [],
   pageSize: 10,
   current: 1,
 });
@@ -42,7 +75,10 @@ const printlog = (v: any) => {
 };
 
 const loadDate = async () => {
-  const res = await axios.post(url + "/quest/list/page", searchParmas.value);
+  const res = await axios.post(
+    url + "/quest/my/list/page/vo",
+    searchParmas.value
+  );
   if (res.code == 0) {
     dataList.value = res.data.records;
     total.value = res.data.total;
@@ -57,14 +93,14 @@ const doDelet = async (question: any) => {
   }
 };
 
-const doUpdate = (question: any) => {
+const toQuestionPage = (question: any) => {
   router.push({
-    path: "/update",
+    path: "/view/question/",
     query: {
       id: question.id,
     },
   });
-  console.log(question);
+  console.log("jump", question);
 };
 
 const onPageChange = (current: number) => {
@@ -78,7 +114,7 @@ onMounted(() => {
 
 const columns = [
   {
-    title: "id",
+    title: "№",
     dataIndex: "id",
   },
   {
@@ -86,36 +122,17 @@ const columns = [
     dataIndex: "title",
   },
   {
-    title: "内容",
-    dataIndex: "content",
-  },
-  {
     title: "タブー",
-    dataIndex: "tags",
+    slotName: "tags",
   },
   {
-    title: "答え",
-    dataIndex: "answer",
-  },
-  {
-    title: "コミット回数",
-    dataIndex: "submitNum",
-  },
-  {
-    title: "正解回数",
+    title: "完成率",
     dataIndex: "acceptedNum",
+    slotName: "acceptedRate",
   },
   {
     title: "作成日",
     dataIndex: "createTime",
-  },
-  {
-    title: "題目設定",
-    dataIndex: "judgeConfig",
-  },
-  {
-    title: "TestCase",
-    dataIndex: "judegCase",
   },
   {
     title: "編集",

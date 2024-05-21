@@ -90,12 +90,52 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import MdEditor from "../../components/MdEditor.vue";
 import QuestionController from "../../controller/QuestionController";
 import axios from "../../util/axios";
+import { useRoute } from "vue-router";
+import message from "@arco-design/web-vue/es/message";
 
-const form = reactive({
+const url = "http://localhost:8081";
+
+const route = useRoute();
+//update or add
+const updatePage = route.path.includes("update");
+const loadDate = async () => {
+  const id = route.query.id;
+  console.log(id);
+  if (!id) {
+    return;
+  }
+  const res = await axios.get(url + "/quest/get", { id: id });
+  if (res.code != null && res.code == 0) {
+    form.value = res.data as any;
+    if (form.value.judgeCase == null) {
+      form.value.judgeCase = [];
+    } else {
+      form.value.judgeCase = JSON.parse(form.value.judgeCase as any);
+    }
+    if (form.value.judgeConfig == null) {
+      form.value.judgeConfig = {
+        memoryLimit: 0,
+        stackLimit: 0,
+        timeLimit: 0,
+      };
+    } else {
+      form.value.judgeConfig = JSON.parse(form.value.judgeConfig as any);
+    }
+    if (form.value.tags != null) {
+      form.value.tags = JSON.parse(form.value.tags as any);
+    }
+  } else {
+    message.error("加载失败" + res.msg);
+  }
+};
+onMounted(() => {
+  loadDate();
+});
+let form = ref({
   answer: "暴力破解",
   content: "题目内容",
   judgeCase: [
@@ -114,26 +154,39 @@ const form = reactive({
 });
 
 const handleAdd = () => {
-  form.judgeCase.push({
+  form.value.judgeCase.push({
     input: "",
     output: "",
   });
 };
 const handleDelete = (index: any) => {
-  form.judgeCase.splice(index, 1);
+  form.value.judgeCase.splice(index, 1);
 };
 
 const onAnswerChange = (value: any) => {
-  form.answer = value;
+  form.value.answer = value;
 };
 
 const onContentChange = (value: any) => {
-  form.content = value;
+  form.value.content = value;
 };
 
 const doSubmit = () => {
-  console.log(form);
-  const res = QuestionController.addQuestion(form);
+  console.log(form.value);
+  if (updatePage) {
+    const res = axios.post(url + "/quest/edit", form.value);
+    console.log("edit", res);
+    if (res.code == 0) {
+      message.success("更新成功");
+    } else {
+      message.error("更新失败" + res.msg);
+    }
+  } else {
+    const res = QuestionController.addQuestion(form.value);
+    if (res.code == 0) {
+      message.success("新增题目成功!");
+    }
+  }
 };
 </script>
 
